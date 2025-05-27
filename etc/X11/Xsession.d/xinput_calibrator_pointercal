@@ -1,0 +1,24 @@
+#!/bin/sh
+
+PATH="/usr/bin:$PATH"
+
+BINARY="xinput_calibrator"
+CALFILE="/etc/pointercal.xinput"
+LOGFILE="/var/log/xinput_calibrator.pointercal.log"
+
+if [ -e $CALFILE ] ; then
+  if grep replace $CALFILE ; then
+    echo "Empty calibration file found, removing it" > $LOGFILE
+    rm $CALFILE
+  else
+    # Calibration data found in $CALFILE
+    exit 0
+  fi
+fi
+
+echo "$CALFILE calibration data file not found. Starting calibration..." > $LOGFILE
+
+#--output-type xorg.conf.d 
+$BINARY --verbose --output-type xorg.conf.d --output-filename $CALFILE >> $LOGFILE 2>&1
+
+echo "Calibration data stored in $CALFILE (log in $LOGFILE)"
