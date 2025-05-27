@@ -6,19 +6,49 @@ BINARY="xinput_calibrator"
 CALFILE="/etc/pointercal.xinput"
 LOGFILE="/var/log/xinput_calibrator.pointercal.log"
 
-if [ -e $CALFILE ] ; then
-  if grep replace $CALFILE ; then
-    echo "Empty calibration file found, removing it" > $LOGFILE
-    rm $CALFILE
-  else
-    # Calibration data found in $CALFILE
+PORTRAIT_MODE=false
+PREAMBLE=""
+
+BASE_INSERT_LINES='\tDriver\t\t\t"libinput"\n\tMatchIsTouchscreen\t"on"\n\tMatchDevicePath\t\t"/dev/input/event*"\n\tOption\t\t\t"DeviceName" "touchscreen"'
+PORTRAIT_INSERT_LINES='\t# 90° clockwise: [ 0  1  0 ]\n\t#                [ -1 0  1 ]\n\t#                [ 0  0  1 ]\n\t#\n\t# In row-major order: "m11 m12 m13 m21 m22 m23 m31 m32 m33"\n\tOption\t\t\t"TransformationMatrix" "0 1 0 -1 0 1 0 0 1"'
+
+for arg in "$@"; do
+  if [ "$arg" = "--portrait" ]; then
+    PORTRAIT_MODE=true
+  fi
+done
+
+if [ -e "$CALFILE" ]; then
+  if [ -s "$CALFILE" ]; then
+    # Calibration data found in $CALFILE, exit
     exit 0
+  else
+    PREAMBLE="$CALFILE calibration file is empty, removing it...\n"
+    rm $CALFILE
   fi
 fi
 
-echo "$CALFILE calibration data file not found. Starting calibration..." > $LOGFILE
+echo "$PREAMBLE$CALFILE calibration data file not found. Starting calibration...\n" > $LOGFILE
 
-#--output-type xorg.conf.d 
 $BINARY --verbose --output-type xorg.conf.d --output-filename $CALFILE >> $LOGFILE 2>&1
 
-echo "Calibration data stored in $CALFILE (log in $LOGFILE)"
+echo "Modifying configuration file..." >> $LOGFILE
+
+# Use sed to insert each line above the line that begins with "EndSection"
+# Loop through each line after interpreting \t and \n
+printf "%b\n" "$BASE_INSERT_LINES" | while IFS= read -r line; do
+  sed -i "/^EndSection/i\\
+$line" "$CALFILE"
+done
+
+if [ "$PORTRAIT_MODE" = true ]; then
+  echo "Portrait mode selected!" >> $LOGFILE
+  printf "%b\n" "$PORTRAIT_INSERT_LINES" | while IFS= read -r line; do
+    sed -i "/^EndSection/i\\
+$line" "$CALFILE"
+  done
+else
+  echo "Default mode selected." >> $LOGFILE
+fi
+
+echo "Calibration data stored in $CALFILE (log in $LOGFILE)" >> $LOGFILE
