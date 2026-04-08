@@ -14,3 +14,42 @@ Raspberry Pi based Netbooter for Sega Naomi/Chihiro/Triforce arcade boards
 <p>Optional: an FTDI based RS485 to USB adaptor for OpenJVS (see <a href="https://github.com/OpenJVS/OpenJVS">https://github.com/OpenJVS/OpenJVS</a> for more information)</p>
 <p>Optional: OpenJVS Pi HAT (see <a href="https://github.com/OpenJVS/OpenJVS">https://github.com/OpenJVS/OpenJVS</a> for more information)</p>
 <p>Optional: ACS ACR122U NFC Card Reader</p>
+
+sudo apt install --no-install-recommends xserver-xorg-core xserver-xorg-input-all xserver-xorg-video-fbdev
+sudo apt install xinput-calibrator
+sudo apt install dbus dbus-x11
+
+Configure Systemd Auto-login:
+```
+sudo tee /etc/systemd/system/firefox-netbooter.service > /dev/null << 'EOF'
+[Unit]
+Description=Firefox Browser Kiosk
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/mkdir -p /tmp/firefox_temp
+ExecStartPre=/bin/bash -c 'echo "user_pref(\"layout.css.devPixelsPerPx\", \"0.651\");" > /tmp/firefox_temp/user.js'
+ExecStart=/usr/bin/startx /usr/bin/firefox --new-instance --profile /tmp/firefox_temp --kiosk 'http://127.0.0.1/index.html'
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+Enable and Start
+```
+sudo systemctl daemon-reload
+sudo systemctl enable firefox-netbooter.service
+sudo systemctl start firefox-netbooter.service
+```
+
+Check Status
+```
+sudo systemctl status firefox-netbooter.service
+journalctl -u firefox-netbooter.service -f
+```
