@@ -30,7 +30,6 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStartPre=/bin/mkdir -p /tmp/firefox_temp
-ExecStartPre=/bin/bash -c 'echo "user_pref(\"layout.css.devPixelsPerPx\", \"0.651\");" > /tmp/firefox_temp/user.js'
 ExecStart=/usr/bin/startx /usr/bin/firefox --new-instance --profile /tmp/firefox_temp --kiosk 'http://127.0.0.1/index.html'
 
 Restart=on-failure
